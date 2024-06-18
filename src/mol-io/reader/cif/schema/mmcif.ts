@@ -705,7 +705,7 @@ export const mmCIF_Schema = {
         /**
          * An abbreviation that identifies the database.
          */
-        database_id: Aliased<'alphafolddb' | 'cas' | 'csd' | 'emdb' | 'icsd' | 'modelarchive' | 'mdf' | 'modbase' | 'ndb' | 'nbs' | 'pdb' | 'pdb-dev' | 'pdf' | 'rcsb' | 'swiss-model_repository' | 'ebi' | 'pdbe' | 'bmrb' | 'wwpdb' | 'pdb_acc'>(lstr),
+        database_id: Aliased<'alphafolddb' | 'cas' | 'csd' | 'emdb' | 'icsd' | 'modelarchive' | 'mdf' | 'modbase' | 'ndb' | 'nbs' | 'pdb' | 'vdb' | 'pdb-dev' | 'pdf' | 'rcsb' | 'swiss-model_repository' | 'ebi' | 'pdbe' | 'bmrb' | 'wwpdb' | 'pdb_acc'>(lstr),
         /**
          * The code assigned by the database identified in
          * _database_2.database_id.

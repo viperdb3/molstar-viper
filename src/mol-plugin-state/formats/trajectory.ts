@@ -95,6 +95,15 @@ export const PdbProvider: TrajectoryFormatProvider = {
     visuals: defaultVisuals
 };
 
+export const VdbProvider: TrajectoryFormatProvider = {
+    label: 'VDB',
+    description: 'VDB',
+    category: TrajectoryFormatCategory,
+    stringExtensions: ['vdb', 'ent'],
+    parse: directTrajectory(StateTransforms.Model.TrajectoryFromVDB),
+    visuals: defaultVisuals
+};
+
 export const PdbqtProvider: TrajectoryFormatProvider = {
     label: 'PDBQT',
     description: 'PDBQT',
@@ -172,6 +181,7 @@ export const BuiltInTrajectoryFormats = [
     ['mmcif', MmcifProvider] as const,
     ['cifCore', CifCoreProvider] as const,
     ['pdb', PdbProvider] as const,
+    ['vdb', VdbProvider] as const,
     ['pdbqt', PdbqtProvider] as const,
     ['gro', GroProvider] as const,
     ['xyz', XyzProvider] as const,

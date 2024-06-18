@@ -122,7 +122,7 @@ const auto = StructureRepresentationPresetProvider({
     params: () => CommonParams,
     apply(ref, params, plugin) {
         const structure = StateObjectRef.resolveAndCheck(plugin.state.data, ref)?.obj?.data;
-        if (!structure) return {};
+        if (!structure) return { };
 
         const thresholds = plugin.config.get(PluginConfig.Structure.SizeThresholds) || Structure.DefaultSizeThresholds;
         const size = Structure.getSize(structure, thresholds);
@@ -152,7 +152,7 @@ const empty = StructureRepresentationPresetProvider({
     id: 'preset-structure-representation-empty',
     display: { name: 'Empty', description: 'Removes all existing representations.' },
     async apply(ref, params, plugin) {
-        return {};
+        return { };
     }
 });
 
@@ -181,6 +181,9 @@ const polymerAndLigand = StructureRepresentationPresetProvider({
         };
 
         const structure = structureCell.obj!.data;
+        const cartoonProps = {
+            sizeFactor: structure.isCoarseGrained ? 0.8 : 0.2,
+        };
 
         // TODO make configurable
         const waterType = (components.water?.obj?.data?.elementCount || 0) > 50_000 ? 'line' : 'ball-and-stick';
@@ -189,7 +192,7 @@ const polymerAndLigand = StructureRepresentationPresetProvider({
         const { update, builder, typeParams, color, symmetryColor, symmetryColorParams, globalColorParams, ballAndStickColor } = reprBuilder(plugin, params, structure);
 
         const representations = {
-            polymer: builder.buildRepresentation(update, components.polymer, { type: 'cartoon', typeParams, color: symmetryColor, colorParams: symmetryColorParams }, { tag: 'polymer' }),
+            polymer: builder.buildRepresentation(update, components.polymer, { type: 'cartoon', typeParams: { ...typeParams, ...cartoonProps }, color: symmetryColor, colorParams: symmetryColorParams }, { tag: 'polymer' }),
             ligand: builder.buildRepresentation(update, components.ligand, { type: 'ball-and-stick', typeParams, color, colorParams: ballAndStickColor }, { tag: 'ligand' }),
             nonStandard: builder.buildRepresentation(update, components.nonStandard, { type: 'ball-and-stick', typeParams, color, colorParams: ballAndStickColor }, { tag: 'non-standard' }),
             branchedBallAndStick: builder.buildRepresentation(update, components.branched, { type: 'ball-and-stick', typeParams: { ...typeParams, alpha: 0.3 }, color, colorParams: ballAndStickColor }, { tag: 'branched-ball-and-stick' }),
@@ -224,6 +227,9 @@ const proteinAndNucleic = StructureRepresentationPresetProvider({
         };
 
         const structure = structureCell.obj!.data;
+        const cartoonProps = {
+            sizeFactor: structure.isCoarseGrained ? 0.8 : 0.2,
+        };
         const gaussianProps = {
             radiusOffset: structure.isCoarseGrained ? 2 : 0,
             smoothness: structure.isCoarseGrained ? 1.0 : 1.5,
@@ -232,7 +238,7 @@ const proteinAndNucleic = StructureRepresentationPresetProvider({
         const { update, builder, typeParams, symmetryColor, symmetryColorParams } = reprBuilder(plugin, params, structure);
 
         const representations = {
-            protein: builder.buildRepresentation(update, components.protein, { type: 'cartoon', typeParams, color: symmetryColor, colorParams: symmetryColorParams }, { tag: 'protein' }),
+            protein: builder.buildRepresentation(update, components.protein, { type: 'cartoon', typeParams: { ...typeParams, ...cartoonProps }, color: symmetryColor, colorParams: symmetryColorParams }, { tag: 'protein' }),
             nucleic: builder.buildRepresentation(update, components.nucleic, { type: 'gaussian-surface', typeParams: { ...typeParams, ...gaussianProps }, color: symmetryColor, colorParams: symmetryColorParams }, { tag: 'nucleic' })
         };
 
@@ -393,6 +399,48 @@ const atomicDetail = StructureRepresentationPresetProvider({
     }
 });
 
+const gaussianSurfacePreset = StructureRepresentationPresetProvider({
+    id: 'preset-structure-representation-gaussian-surface',
+    display: {
+        name: 'Gaussian Surface (Polymer Chain ID)',
+        group: 'Custom',
+        description: 'Shows the structure with Gaussian Surface, colored by polymer chain ID, and sized physically.'
+    },
+    params: () => CommonParams,
+    async apply(ref, params, plugin) {
+        const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref);
+        if (!structureCell) return {};
+
+        const components = {
+            polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
+        };
+
+        const structure = structureCell.obj!.data;
+        const size = Structure.getSize(structure);
+
+        const gaussianProps = {
+            radiusOffset: size === Structure.Size.Gigantic ? 2 : 0,
+            smoothness: size === Structure.Size.Gigantic ? 1.0 : 1.5,
+            visuals: size === Structure.Size.Gigantic ? ['structure-gaussian-surface-mesh'] : undefined,
+        };
+
+        const { update, builder, typeParams, symmetryColorParams } = reprBuilder(plugin, params, structure);
+
+        const representations = {
+            polymer: builder.buildRepresentation(update, components.polymer, {
+                type: 'gaussian-surface',
+                typeParams: { ...typeParams, ...gaussianProps },
+                color: 'polymer-id', // Specify the desired color scheme
+                colorParams: symmetryColorParams
+            }, { tag: 'polymer' }),
+        };
+
+        await update.commit({ revertOnError: true });
+        await updateFocusRepr(plugin, structure, params.theme?.focus?.name, params.theme?.focus?.params);
+
+        return { components, representations };
+    }
+});
 const illustrative = StructureRepresentationPresetProvider({
     id: 'preset-structure-representation-illustrative',
     display: {
@@ -512,6 +560,7 @@ export const PresetStructureRepresentations = {
     'protein-and-nucleic': proteinAndNucleic,
     'coarse-surface': coarseSurface,
     illustrative,
+    gaussianSurface: gaussianSurfacePreset,
     'molecular-surface': molecularSurface,
     'auto-lod': autoLod,
 };

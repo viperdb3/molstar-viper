@@ -12,3 +12,9 @@ export interface PdbFile {
     id?: string,
     isPdbqt?: boolean,
 }
+
+export interface VdbFile {
+    lines: Tokens
+    id?: string,
+    isPdbqt?: boolean,
+}

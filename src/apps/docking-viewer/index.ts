@@ -68,7 +68,7 @@ class Viewer {
                 layoutShowLog: false,
                 layoutShowLeftPanel: true,
 
-                viewportShowExpand: true,
+                viewportShowExpand: false,
                 viewportShowControls: false,
                 viewportShowSettings: false,
                 viewportShowSelectionMode: false,
@@ -92,7 +92,7 @@ class Viewer {
             customParamEditors: defaultSpec.customParamEditors,
             layout: {
                 initial: {
-                    isExpanded: o.layoutIsExpanded,
+                    isExpanded: false,
                     showControls: o.layoutShowControls,
                     controlsDisplay: o.layoutControlsDisplay,
                 },

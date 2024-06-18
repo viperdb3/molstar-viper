@@ -16,6 +16,7 @@ import { coordinatesFromDcd } from '../../mol-model-formats/structure/dcd';
 import { trajectoryFromGRO } from '../../mol-model-formats/structure/gro';
 import { trajectoryFromCCD, trajectoryFromMmCIF } from '../../mol-model-formats/structure/mmcif';
 import { trajectoryFromPDB } from '../../mol-model-formats/structure/pdb';
+import { trajectoryFromVDB } from '../../mol-model-formats/structure/vdb';
 import { topologyFromPsf } from '../../mol-model-formats/structure/psf';
 import { Coordinates, Model, Queries, QueryContext, Structure, StructureElement, StructureQuery, StructureSelection as Sel, Topology, ArrayTrajectory, Trajectory, Frame } from '../../mol-model/structure';
 import { PluginContext } from '../../mol-plugin/context';
@@ -68,6 +69,7 @@ export { TrajectoryFromModelAndCoordinates };
 export { TrajectoryFromBlob };
 export { TrajectoryFromMmCif };
 export { TrajectoryFromPDB };
+export { TrajectoryFromVDB };
 export { TrajectoryFromGRO };
 export { TrajectoryFromXYZ };
 export { TrajectoryFromLammpsData };
@@ -361,6 +363,27 @@ const TrajectoryFromPDB = PluginStateTransform.BuiltIn({
             const parsed = await parsePDB(a.data, a.label, params.isPdbqt).runInContext(ctx);
             if (parsed.isError) throw new Error(parsed.message);
             const models = await trajectoryFromPDB(parsed.result).runInContext(ctx);
+            const props = trajectoryProps(models);
+            return new SO.Molecule.Trajectory(models, props);
+        });
+    }
+});
+
+type TrajectoryFromVDB = typeof TrajectoryFromVDB
+const TrajectoryFromVDB = PluginStateTransform.BuiltIn({
+    name: 'trajectory-from-vdb',
+    display: { name: 'Parse VDB', description: 'Parse VDB string and create trajectory.' },
+    from: [SO.Data.String],
+    to: SO.Molecule.Trajectory,
+    params: {
+        isPdbqt: PD.Boolean(false)
+    }
+})({
+    apply({ a, params }) {
+        return Task.create('Parse VDB', async ctx => {
+            const parsed = await parsePDB(a.data, a.label, params.isPdbqt).runInContext(ctx);
+            if (parsed.isError) throw new Error(parsed.message);
+            const models = await trajectoryFromVDB(parsed.result).runInContext(ctx);
             const props = trajectoryProps(models);
             return new SO.Molecule.Trajectory(models, props);
         });
