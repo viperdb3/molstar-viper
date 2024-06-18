@@ -400,6 +400,48 @@ const atomicDetail = StructureRepresentationPresetProvider({
     }
 });
 
+const gaussianSurfacePreset = StructureRepresentationPresetProvider({
+    id: 'preset-structure-representation-gaussian-surface',
+    display: {
+        name: 'Gaussian Surface (Polymer Chain ID)',
+        group: 'Custom',
+        description: 'Shows the structure with Gaussian Surface, colored by polymer chain ID, and sized physically.'
+    },
+    params: () => CommonParams,
+    async apply(ref, params, plugin) {
+        const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref);
+        if (!structureCell) return {};
+
+        const components = {
+            polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
+        };
+
+        const structure = structureCell.obj!.data;
+        const size = Structure.getSize(structure);
+
+        const gaussianProps = {
+            radiusOffset: size === Structure.Size.Gigantic ? 2 : 0,
+            smoothness: size === Structure.Size.Gigantic ? 1.0 : 1.5,
+            visuals: size === Structure.Size.Gigantic ? ['structure-gaussian-surface-mesh'] : undefined,
+        };
+
+        const { update, builder, typeParams, symmetryColorParams } = reprBuilder(plugin, params, structure);
+
+        const representations = {
+            polymer: builder.buildRepresentation(update, components.polymer, {
+                type: 'gaussian-surface',
+                typeParams: { ...typeParams, ...gaussianProps },
+                color: 'polymer-id', // Specify the desired color scheme
+                colorParams: symmetryColorParams
+            }, { tag: 'polymer' }),
+        };
+
+        await update.commit({ revertOnError: true });
+        await updateFocusRepr(plugin, structure, params.theme?.focus?.name, params.theme?.focus?.params);
+
+        return { components, representations };
+    }
+});
 const illustrative = StructureRepresentationPresetProvider({
     id: 'preset-structure-representation-illustrative',
     display: {
@@ -485,6 +527,7 @@ export const PresetStructureRepresentations = {
     'protein-and-nucleic': proteinAndNucleic,
     'coarse-surface': coarseSurface,
     illustrative,
+    gaussianSurface: gaussianSurfacePreset,
     'auto-lod': autoLod,
 };
 export type PresetStructureRepresentations = typeof PresetStructureRepresentations;

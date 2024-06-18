@@ -9,9 +9,11 @@
 import { ANVILMembraneOrientation } from '../../extensions/anvil/behavior';
 import { Backgrounds } from '../../extensions/backgrounds';
 import { DnatcoNtCs } from '../../extensions/dnatco';
-import { G3DFormat, G3dProvider } from '../../extensions/g3d/format';
+import { G3dProvider } from '../../extensions/g3d/format';
 import { GeometryExport } from '../../extensions/geo-export';
-import { MAQualityAssessment, QualityAssessmentPLDDTPreset, QualityAssessmentQmeanPreset } from '../../extensions/model-archive/quality-assessment/behavior';
+import {
+    // MAQualityAssessment,
+    QualityAssessmentPLDDTPreset, QualityAssessmentQmeanPreset } from '../../extensions/model-archive/quality-assessment/behavior';
 import { QualityAssessment } from '../../extensions/model-archive/quality-assessment/prop';
 import { ModelExport } from '../../extensions/model-export';
 import { Mp4Export } from '../../extensions/mp4-export';
@@ -20,10 +22,10 @@ import { loadMVSX } from '../../extensions/mvs/components/formats';
 import { loadMVS } from '../../extensions/mvs/load';
 import { MVSData } from '../../extensions/mvs/mvs-data';
 import { PDBeStructureQualityReport } from '../../extensions/pdbe';
-import { RCSBValidationReport } from '../../extensions/rcsb';
+// import { RCSBValidationReport } from '../../extensions/rcsb';
 import { AssemblySymmetry, AssemblySymmetryConfig } from '../../extensions/assembly-symmetry';
 import { SbNcbrPartialCharges, SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider, SbNcbrTunnels } from '../../extensions/sb-ncbr';
-import { Volseg, VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
+// import { Volseg, VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
 import { wwPDBChemicalComponentDictionary } from '../../extensions/wwpdb/ccd/behavior';
 import { wwPDBStructConnExtensionFunctions } from '../../extensions/wwpdb/struct-conn';
 import { ZenodoImport } from '../../extensions/zenodo';
@@ -57,6 +59,7 @@ import { Asset } from '../../mol-util/assets';
 import { Color } from '../../mol-util/color';
 import '../../mol-util/polyfill';
 import { ObjectKeys } from '../../mol-util/type-helpers';
+import { GaussianSurfacePreset, ShowButtons, ViewportComponent } from '../docking-viewer/viewport';
 
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { consoleStats, setDebugMode, setProductionMode, setTimingMode } from '../../mol-util/debug';
@@ -66,18 +69,18 @@ const CustomFormats = [
 ];
 
 export const ExtensionMap = {
-    'volseg': PluginSpec.Behavior(Volseg),
+    // 'volseg': PluginSpec.Behavior(Volseg),
     'backgrounds': PluginSpec.Behavior(Backgrounds),
     'dnatco-ntcs': PluginSpec.Behavior(DnatcoNtCs),
     'pdbe-structure-quality-report': PluginSpec.Behavior(PDBeStructureQualityReport),
     'assembly-symmetry': PluginSpec.Behavior(AssemblySymmetry),
-    'rcsb-validation-report': PluginSpec.Behavior(RCSBValidationReport),
+    // 'rcsb-validation-report': PluginSpec.Behavior(RCSBValidationReport),
     'anvil-membrane-orientation': PluginSpec.Behavior(ANVILMembraneOrientation),
-    'g3d': PluginSpec.Behavior(G3DFormat),
+    // 'g3d': PluginSpec.Behavior(G3DFormat),
     'model-export': PluginSpec.Behavior(ModelExport),
     'mp4-export': PluginSpec.Behavior(Mp4Export),
     'geo-export': PluginSpec.Behavior(GeometryExport),
-    'ma-quality-assessment': PluginSpec.Behavior(MAQualityAssessment),
+    // 'ma-quality-assessment': PluginSpec.Behavior(MAQualityAssessment),
     'zenodo-import': PluginSpec.Behavior(ZenodoImport),
     'sb-ncbr-partial-charges': PluginSpec.Behavior(SbNcbrPartialCharges),
     'wwpdb-chemical-component-dictionary': PluginSpec.Behavior(wwPDBChemicalComponentDictionary),
@@ -118,7 +121,7 @@ const DefaultViewerOptions = {
     pdbProvider: PluginConfig.Download.DefaultPdbProvider.defaultValue,
     emdbProvider: PluginConfig.Download.DefaultEmdbProvider.defaultValue,
     saccharideCompIdMapType: 'default' as SaccharideCompIdMapType,
-    volumesAndSegmentationsDefaultServer: VolsegVolumeServerConfig.DefaultServer.defaultValue,
+    // volumesAndSegmentationsDefaultServer: VolsegVolumeServerConfig.DefaultServer.defaultValue,
     rcsbAssemblySymmetryDefaultServerType: AssemblySymmetryConfig.DefaultServerType.defaultValue,
     rcsbAssemblySymmetryDefaultServerUrl: AssemblySymmetryConfig.DefaultServerUrl.defaultValue,
     rcsbAssemblySymmetryApplyColors: AssemblySymmetryConfig.ApplyColors.defaultValue,
@@ -129,7 +132,7 @@ export class Viewer {
     constructor(public plugin: PluginUIContext) {
     }
 
-    static async create(elementOrId: string | HTMLElement, options: Partial<ViewerOptions> = {}) {
+    static async create(elementOrId: string | HTMLElement, showButtons = true, options: Partial<ViewerOptions> = {}) {
         const definedOptions = {} as any;
         // filter for defined properies only so the default values
         // are property applied
@@ -173,6 +176,9 @@ export class Viewer {
                     left: o.layoutShowLeftPanel ? undefined : 'none',
                 },
                 remoteState: o.layoutShowRemoteState ? 'default' : 'none',
+                viewport: {
+                    view: ViewportComponent
+                }
             },
             config: [
                 [PluginConfig.General.DisableAntialiasing, o.disableAntialiasing],
@@ -194,12 +200,13 @@ export class Viewer {
                 [PluginConfig.VolumeStreaming.Enabled, !o.volumeStreamingDisabled],
                 [PluginConfig.Download.DefaultPdbProvider, o.pdbProvider],
                 [PluginConfig.Download.DefaultEmdbProvider, o.emdbProvider],
-                [PluginConfig.Structure.DefaultRepresentationPreset, ViewerAutoPreset.id],
+                [PluginConfig.Structure.DefaultRepresentationPreset, GaussianSurfacePreset.id],
                 [PluginConfig.Structure.SaccharideCompIdMapType, o.saccharideCompIdMapType],
-                [VolsegVolumeServerConfig.DefaultServer, o.volumesAndSegmentationsDefaultServer],
+                // [VolsegVolumeServerConfig.DefaultServer, o.volumesAndSegmentationsDefaultServer],
                 [AssemblySymmetryConfig.DefaultServerType, o.rcsbAssemblySymmetryDefaultServerType],
                 [AssemblySymmetryConfig.DefaultServerUrl, o.rcsbAssemblySymmetryDefaultServerUrl],
                 [AssemblySymmetryConfig.ApplyColors, o.rcsbAssemblySymmetryApplyColors],
+                [ShowButtons, showButtons]
             ]
         };
 
@@ -214,7 +221,7 @@ export class Viewer {
             onBeforeUIRender: plugin => {
                 // the preset needs to be added before the UI renders otherwise
                 // "Download Structure" wont be able to pick it up
-                plugin.builders.structure.representation.registerPreset(ViewerAutoPreset);
+                plugin.builders.structure.representation.registerPreset(GaussianSurfacePreset);
             }
         });
         return new Viewer(plugin);

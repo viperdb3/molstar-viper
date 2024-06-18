@@ -37,32 +37,32 @@ function shinyStyle(plugin: PluginContext) {
     } });
 }
 
-function occlusionStyle(plugin: PluginContext) {
-    return PluginCommands.Canvas3D.SetSettings(plugin, { settings: {
-        renderer: {
-            ...plugin.canvas3d!.props.renderer,
-        },
-        postprocessing: {
-            ...plugin.canvas3d!.props.postprocessing,
-            occlusion: { name: 'on', params: {
-                blurKernelSize: 15,
-                multiScale: { name: 'off', params: {} },
-                radius: 5,
-                bias: 0.8,
-                samples: 32,
-                resolutionScale: 1,
-                color: Color(0x000000),
-            } },
-            outline: { name: 'on', params: {
-                scale: 1.0,
-                threshold: 0.33,
-                color: Color(0x0000),
-                includeTransparent: true,
-            } },
-            shadow: { name: 'off', params: {} },
-        }
-    } });
-}
+// function occlusionStyle(plugin: PluginContext) {
+//     return PluginCommands.Canvas3D.SetSettings(plugin, { settings: {
+//         renderer: {
+//             ...plugin.canvas3d!.props.renderer,
+//         },
+//         postprocessing: {
+//             ...plugin.canvas3d!.props.postprocessing,
+//             occlusion: { name: 'on', params: {
+//                 blurKernelSize: 15,
+//                 multiScale: { name: 'off', params: {} },
+//                 radius: 5,
+//                 bias: 0.8,
+//                 samples: 32,
+//                 resolutionScale: 1,
+//                 color: Color(0x000000),
+//             } },
+//             outline: { name: 'on', params: {
+//                 scale: 1.0,
+//                 threshold: 0.33,
+//                 color: Color(0x0000),
+//                 includeTransparent: true,
+//             } },
+//             shadow: { name: 'off', params: {} },
+//         }
+//     } });
+// }
 
 const ligandPlusSurroundings = StructureSelectionQuery('Surrounding Residues (5 \u212B) of Ligand plus Ligand itself', MS.struct.modifier.union([
     MS.struct.modifier.includeSurroundings({
@@ -132,7 +132,34 @@ export const IllustrativePreset = StructureRepresentationPresetProvider({
         };
 
         await update.commit({ revertOnError: true });
-        await occlusionStyle(plugin);
+        await shinyStyle(plugin);
+        plugin.managers.interactivity.setProps({ granularity: 'residue' });
+
+        return { components, representations };
+    }
+});
+
+export const GaussianSurfacePreset = StructureRepresentationPresetProvider({
+    id: 'preset-gaussian',
+    display: { name: 'Structure' },
+    params: () => PresetParams,
+    async apply(ref, params, plugin) {
+        const structureCell = StateObjectRef.resolveAndCheck(plugin.state.data, ref);
+        if (!structureCell) return {};
+
+        const components = {
+            ligand: await presetStaticComponent(plugin, structureCell, 'ligand'),
+            polymer: await presetStaticComponent(plugin, structureCell, 'polymer'),
+        };
+
+        const { update, builder, typeParams } = StructureRepresentationPresetProvider.reprBuilder(plugin, params);
+        const representations = {
+            ligand: builder.buildRepresentation(update, components.ligand, { type: 'gaussian-surface', typeParams: { ...typeParams, material: CustomMaterial, sizeFactor: 0.35 }, color: 'chain-id', colorParams: { carbonColor: { name: 'element-symbol', params: {} } } }, { tag: 'ligand' }),
+            polymer: builder.buildRepresentation(update, components.polymer, { type: 'gaussian-surface', typeParams: { ...typeParams, material: CustomMaterial }, color: 'polymer-id', colorParams: { palette: (plugin.customState as any).colorPalette } }, { tag: 'polymer' }),
+        };
+
+        await update.commit({ revertOnError: true });
+        await shinyStyle(plugin);
         plugin.managers.interactivity.setProps({ granularity: 'residue' });
 
         return { components, representations };
@@ -239,14 +266,23 @@ export class ViewportComponent extends PluginUIComponent {
     };
 
     structurePreset = () => this.set(StructurePreset);
-    illustrativePreset = () => this.set(IllustrativePreset);
+    gaussianSurfacePreset = () => this.set(GaussianSurfacePreset);
+    // illustrativePreset = () => this.set(IllustrativePreset);
     surfacePreset = () => this.set(SurfacePreset);
     pocketPreset = () => this.set(PocketPreset);
     interactionsPreset = () => this.set(InteractionsPreset);
-
+    resetCamera = () => {
+        PluginCommands.Camera.Reset(this.plugin, {});
+    };
+    aplyAll = () => {
+        this.structurePreset().then(()=> this.resetCamera());
+    };
+    aplyAllilus = () => {
+        this.gaussianSurfacePreset().then(()=> this.resetCamera());
+    };
     get showButtons() {
         return this.plugin.config.get(ShowButtons);
-    }
+    };
 
     render() {
         const VPControls = this.plugin.spec.components?.viewport?.controls || ViewportControls;
@@ -255,26 +291,32 @@ export class ViewportComponent extends PluginUIComponent {
             <Viewport />
             {this.showButtons && <div className='msp-viewport-top-left-controls'>
                 <div style={{ marginBottom: '4px' }}>
+                    <Button onClick={this.aplyAll}>Cartoon</Button>
+                </div>
+                <div style={{ marginBottom: '4px' }}>
+                    <Button onClick={this.aplyAllilus}>Surface</Button>
+                </div>
+                {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.structurePreset} >Structure</Button>
-                </div>
-                <div style={{ marginBottom: '4px' }}>
+                </div>*/}
+                {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.illustrativePreset}>Illustrative</Button>
-                </div>
-                <div style={{ marginBottom: '4px' }}>
+                </div>*/}
+                {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.surfacePreset}>Surface</Button>
-                </div>
+                </div>*/}
                 {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.pocketPreset}>Pocket</Button>
                 </div> */}
-                <div style={{ marginBottom: '4px' }}>
+                {/* <div style={{ marginBottom: '4px' }}>
                     <Button onClick={this.interactionsPreset}>Interactions</Button>
-                </div>
+                </div>*/}
             </div>}
-            <VPControls />
-            <BackgroundTaskProgress />
+            <VPControls/>
+            <BackgroundTaskProgress/>
             <div className='msp-highlight-toast-wrapper'>
-                <LociLabels />
-                <Toasts />
+                <LociLabels/>
+                <Toasts/>
             </div>
         </>;
     }
