@@ -63,6 +63,13 @@ import { ObjectKeys } from '../../mol-util/type-helpers';
 import { OpenFiles } from '../../mol-plugin-state/actions/file';
 import { StringLike } from '../../mol-io/common/string-like';
 import { QualityMediumPreset, QualityLowerPreset, QualityLowestPreset, ShowButtons, ViewportComponent } from '../docking-viewer/viewport';
+import { StructureSelectionModifier } from '../../mol-plugin-state/manager/structure/selection';
+import { Script } from '../../mol-script/script';
+import { StructureSelection } from '../../mol-model/structure/query/selection';
+import { compileIdListSelection } from '../../mol-script/util/id-list';
+import { ResidueQuery, StructureSelectionQueries } from '../../mol-plugin-state/helpers/structure-selection-query';
+import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
+import { clearStructureOverpaint, setStructureOverpaint } from '../../mol-plugin-state/helpers/structure-overpaint';
 
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { consoleStats, setDebugMode, setProductionMode, setTimingMode, isProductionMode, isDebugMode, isTimingMode } from '../../mol-util/debug';
@@ -267,6 +274,164 @@ export class Viewer {
                 }
             }
         }));
+    }
+
+    async applySelectionOverPaint(input: string, idType: 'auth' | 'label' | 'atom-id', modifier: StructureSelectionModifier, color: number) {
+        if (!input.trim()) return;
+
+        try {
+            const currentStructure = this.plugin.managers.structure.hierarchy.current.structures[0]?.cell.obj?.data;
+            if (!currentStructure) return;
+            const structure = this.plugin.managers.structure.hierarchy.current.structures;
+            if (!structure) {
+                return;
+            }
+
+            let loci;
+            if (/^[A-Za-z]$/.test(input)) {
+                // Selection by `chainId`
+                const sel = Script.getStructureSelection(Q => Q.struct.generator.atomGroups({
+                    'chain-test': Q.core.rel.eq([Q.struct.atomProperty.macromolecular.auth_asym_id(), input]),
+                    'group-by': Q.struct.atomProperty.macromolecular.residueKey()
+                }), currentStructure);
+                loci = StructureSelection.toLociWithSourceUnits(sel);
+                this.plugin.managers.interactivity.lociSelects.select({ loci }, false);
+            } else {
+                // Selection by residues/ranges
+                const query = compileIdListSelection(input, idType);
+                this.plugin.managers.structure.selection.fromCompiledQuery(modifier, query, false);
+                loci = this.plugin.managers.structure.selection.getLoci(currentStructure);
+            }
+            const params: StructureComponentManager.AddParams = {
+                selection: StructureSelectionQueries.current,
+                options: { checkExisting: false, label: 'selectionComponent' },
+                representation: 'ball-and-stick',
+            };
+
+            await this.plugin.managers.structure.component.add(params, structure);
+            // Apply color and overpaint
+            const components = this.plugin.managers.structure.hierarchy.current.structures[0]?.components || [];
+            await setStructureOverpaint(this.plugin, components, Color(color), async () => loci);
+
+            this.plugin.managers.interactivity.lociSelects.deselectAll();
+        } catch (e) {
+            console.error(e);
+            this.plugin.log.error('Error creating the selection');
+        }
+    }
+
+    async applyselectAmino(aminoName: string) {
+        const StandardAminoAcids2 = [
+            [['HIS'], 'Histidine'],
+            [['ARG'], 'Arginine'],
+            [['LYS'], 'Lysine'],
+            [['ILE'], 'Isoleucine'],
+            [['PHE'], 'Phenylalanine'],
+            [['LEU'], 'Leucine'],
+            [['TRP'], 'Tryptophan'],
+            [['ALA'], 'Alanine'],
+            [['MET'], 'Methionine'],
+            [['PRO'], 'Proline'],
+            [['CYS'], 'Cysteine'],
+            [['ASN'], 'Asparagine'],
+            [['VAL'], 'Valine'],
+            [['GLY'], 'Glycine'],
+            [['SER'], 'Serine'],
+            [['GLN'], 'Glutamine'],
+            [['TYR'], 'Tyrosine'],
+            [['ASP'], 'Aspartic Acid'],
+            [['GLU'], 'Glutamic Acid'],
+            [['THR'], 'Threonine'],
+            [['SEC'], 'Selenocysteine'],
+            [['PYL'], 'Pyrrolysine'],
+        ].sort((a, b) => a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0) as [string[], string][];
+        const aminoEntry = StandardAminoAcids2.find(amino => amino[0][0] === aminoName);
+        if (!aminoEntry) {
+            console.error(`No found Amino Acid: ${aminoName}`);
+            return;
+        }
+        const query = ResidueQuery(aminoEntry, 'Amino Acid');
+        this.plugin.managers.structure.selection.fromSelectionQuery('add', query, false);
+    }
+    async applyResidueAminoAcidsSelection(aminoName: string, color: number) {
+        try {
+            const currentStructure = this.plugin.managers.structure.hierarchy.current.structures[0]?.cell.obj?.data;
+            if (!currentStructure) return;
+            const structure = this.plugin.managers.structure.hierarchy.current.structures;
+            if (!structure) {
+                return;
+            }
+            await this.applyselectAmino(aminoName);
+            const params: StructureComponentManager.AddParams = {
+                selection: StructureSelectionQueries.current,
+                options: { checkExisting: false, label: 'selectionComponent' },
+                representation: 'ball-and-stick',
+            }; // Pamametros para crear componente
+
+            await this.plugin.managers.structure.component.add(params, structure); // crear componente
+
+            const loci = this.plugin.managers.structure.selection.getLoci(currentStructure);
+            const components = this.plugin.managers.structure.hierarchy.current.structures[0]?.components || [];
+            await setStructureOverpaint(this.plugin, components, Color(color), async () => loci);
+
+            this.plugin.managers.interactivity.lociSelects.deselectAll();
+
+        } catch (e) {
+            console.error(e);
+            this.plugin.log.error('Error al crear la selección');
+        }
+    }
+
+    async deleteComponentsByName() {
+        const components = this.plugin.managers.structure.hierarchy.current.structures.flatMap(s => s.components);
+
+        if (!components.length) {
+            return;
+        }
+
+        // Filter all components that match the specified name
+        const componentsToRemove = components.filter(component =>
+            component.cell.obj?.label === 'selectionComponent'
+        );
+
+        if (!componentsToRemove.length) {
+            return;
+        }
+
+        try {
+            const builder = this.plugin.state.data.build();
+            for (const component of componentsToRemove) {
+                const selector = component.cell.transform.ref;
+                builder.delete(selector);
+            }
+
+            await builder.commit({ canUndo: 'Delete Components' });
+
+        } catch (error) {
+            console.error('Error while deleting components:', error);
+        }
+    }
+    async clearOverpaint() {
+        const currentStructure = this.plugin.managers.structure.hierarchy.current.structures[0];
+        if (!currentStructure) {
+            return;
+        }
+        const components = currentStructure.components || [];
+
+        await clearStructureOverpaint(this.plugin, components);
+    }
+
+    async deselectSelection() {
+        await this.clearOverpaint();
+        await this.deleteComponentsByName();
+    }
+
+    applyUniformColorToStructure(colorHex: number, coloring: 'uniform' | 'atom-id' | 'chain-id') {
+        this.plugin.dataTransaction(async () => {
+            for (const s of this.plugin.managers.structure.hierarchy.current.structures) {
+                await this.plugin.managers.structure.component.updateRepresentationsTheme(s.components, { color: coloring, colorParams: { value: Color(colorHex) } });
+            }
+        });
     }
 
     async loadAllModelsOrAssemblyFromUrl(url: string, format: BuiltInTrajectoryFormat = 'mmcif', isBinary = false, options?: LoadStructureOptions) {
