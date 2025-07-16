@@ -32,7 +32,7 @@ const MaxSequenceNumberSize = 5;
 
 const DefaultMarkerColors = {
     selected: 'rgb(51, 255, 25)',
-    highlighted: 'rgb(255, 102, 153)',
+    highlighted: 'rgb(218, 115, 38)',
     focused: '',
 };
 
@@ -144,11 +144,11 @@ export class Sequence<P extends SequenceProps> extends PluginUIComponent<P> {
     }
 
     click(loci: StructureElement.Loci | undefined, buttons: ButtonsType, button: ButtonsType.Flag, modifiers: ModifiersKeys) {
-        const ev = { current: Representation.Loci.Empty, buttons, button, modifiers };
-        if (loci !== undefined && !StructureElement.Loci.isEmpty(loci)) {
-            ev.current = { loci };
-        }
-        this.plugin.behaviors.interaction.click.next(ev);
+        // const ev = { current: Representation.Loci.Empty, buttons, button, modifiers };
+        // if (loci !== undefined && !StructureElement.Loci.isEmpty(loci)) {
+        //     ev.current = { loci };
+        // }
+        // this.plugin.behaviors.interaction.click.next(ev);
     }
 
     contextMenu = (e: React.MouseEvent) => {

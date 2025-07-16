@@ -100,9 +100,9 @@ export const RendererParams = {
     interiorColor: PD.Color(Color.fromNormalizedRgb(0.3, 0.3, 0.3)),
 
     colorMarker: PD.Boolean(true, { description: 'Enable color marker' }),
-    highlightColor: PD.Color(Color.fromNormalizedRgb(1.0, 0.4, 0.6)),
+    highlightColor: PD.Color(Color.fromNormalizedRgb(0.855, 0.451, 0.149)),
     selectColor: PD.Color(Color.fromNormalizedRgb(0.2, 1.0, 0.1)),
-    dimColor: PD.Color(Color.fromNormalizedRgb(1.0, 1.0, 1.0)),
+    dimColor: PD.Color(Color.fromNormalizedRgb(0.855, 0.451, 0.149)),
     highlightStrength: PD.Numeric(0.3, { min: 0.0, max: 1.0, step: 0.1 }),
     selectStrength: PD.Numeric(0.3, { min: 0.0, max: 1.0, step: 0.1 }),
     dimStrength: PD.Numeric(0.0, { min: 0.0, max: 1.0, step: 0.1 }),
