@@ -62,7 +62,7 @@ import '../../mol-util/polyfill';
 import { ObjectKeys } from '../../mol-util/type-helpers';
 import { OpenFiles } from '../../mol-plugin-state/actions/file';
 import { StringLike } from '../../mol-io/common/string-like';
-import { GaussianSurfacePreset, ShowButtons, ViewportComponent } from '../docking-viewer/viewport';
+import { QualityMediumPreset, QualityLowerPreset, QualityLowestPreset, ShowButtons, ViewportComponent } from '../docking-viewer/viewport';
 
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { consoleStats, setDebugMode, setProductionMode, setTimingMode, isProductionMode, isDebugMode, isTimingMode } from '../../mol-util/debug';
@@ -137,7 +137,7 @@ export class Viewer {
     constructor(public plugin: PluginUIContext) {
     }
 
-    static async create(elementOrId: string | HTMLElement, showButtons = true, options: Partial<ViewerOptions> = {}) {
+    static async create(elementOrId: string | HTMLElement, qualityID: string, showButtons = true, options: Partial<ViewerOptions> = {}) {
         const definedOptions = {} as any;
         // filter for defined properies only so the default values
         // are property applied
@@ -149,6 +149,11 @@ export class Viewer {
         const defaultSpec = DefaultPluginUISpec();
 
         const disabledExtension = new Set(o.disabledExtensions ?? []);
+        const qualityPresets: Record<string, StructureRepresentationPresetProvider> = {
+            'quality-lower': QualityLowerPreset,
+            'quality-lowest': QualityLowestPreset,
+            'quality-medium': QualityMediumPreset,
+        };
 
         const spec: PluginUISpec = {
             actions: defaultSpec.actions,
@@ -206,7 +211,7 @@ export class Viewer {
                 [PluginConfig.VolumeStreaming.Enabled, !o.volumeStreamingDisabled],
                 [PluginConfig.Download.DefaultPdbProvider, o.pdbProvider],
                 [PluginConfig.Download.DefaultEmdbProvider, o.emdbProvider],
-                [PluginConfig.Structure.DefaultRepresentationPreset, GaussianSurfacePreset.id],
+                [PluginConfig.Structure.DefaultRepresentationPreset, qualityID],
                 [PluginConfig.Structure.SaccharideCompIdMapType, o.saccharideCompIdMapType],
                 // [VolsegVolumeServerConfig.DefaultServer, o.volumesAndSegmentationsDefaultServer],
                 [AssemblySymmetryConfig.DefaultServerType, o.rcsbAssemblySymmetryDefaultServerType],
@@ -227,7 +232,12 @@ export class Viewer {
             onBeforeUIRender: plugin => {
                 // the preset needs to be added before the UI renders otherwise
                 // "Download Structure" wont be able to pick it up
-                plugin.builders.structure.representation.registerPreset(GaussianSurfacePreset);
+                const selectedPreset = qualityPresets[qualityID];
+                if (selectedPreset) {
+                    plugin.builders.structure.representation.registerPreset(selectedPreset);
+                } else {
+                    console.warn(`Preset for qualityID "${qualityID}" not found. Using default preset.`);
+                }
             }
         });
         plugin.canvas3d?.setProps({ illumination: { enabled: o.illumination } });
@@ -339,7 +349,10 @@ export class Viewer {
             source: {
                 name: 'alphafolddb' as const,
                 params: {
-                    id: afdb,
+                    provider: {
+                        id: 'afdb',
+                        encoding: 'bcif',
+                    },
                     options: {
                         ...params.source.params.options,
                         representation: 'preset-structure-representation-ma-quality-assessment-plddt'
