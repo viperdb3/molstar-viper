@@ -416,20 +416,20 @@ const gaussianSurfacePreset = StructureRepresentationPresetProvider({
         };
 
         const structure = structureCell.obj!.data;
-        const size = Structure.getSize(structure);
+        // const size = Structure.getSize(structure);
 
-        const gaussianProps = {
-            radiusOffset: size === Structure.Size.Gigantic ? 2 : 0,
-            smoothness: size === Structure.Size.Gigantic ? 1.0 : 1.5,
-            visuals: size === Structure.Size.Gigantic ? ['structure-gaussian-surface-mesh'] : undefined,
-        };
+        // const gaussianProps = {
+        //     radiusOffset: size === Structure.Size.Gigantic ? 2 : 0,
+        //     smoothness: size === Structure.Size.Gigantic ? 1.0 : 1.5,
+        //     visuals: size === Structure.Size.Gigantic ? ['structure-gaussian-surface-mesh'] : undefined,
+        // };
 
         const { update, builder, typeParams, symmetryColorParams } = reprBuilder(plugin, params, structure);
 
         const representations = {
             polymer: builder.buildRepresentation(update, components.polymer, {
                 type: 'gaussian-surface',
-                typeParams: { ...typeParams, ...gaussianProps },
+                typeParams: { ...typeParams },
                 color: 'polymer-id', // Specify the desired color scheme
                 colorParams: symmetryColorParams
             }, { tag: 'polymer' }),

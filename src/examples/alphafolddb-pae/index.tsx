@@ -20,7 +20,7 @@ export class AlphaFoldPAEExample {
 
     async init(options: { pluginContainerId: string, plotContainerId: string }) {
         this.plotContainerId = options.plotContainerId;
-        this.viewer = await Viewer.create(options.pluginContainerId, {
+        this.viewer = await Viewer.create(options.pluginContainerId, 'quality-lower', false, {
             layoutIsExpanded: false,
             layoutShowControls: false,
             layoutShowLeftPanel: false,
